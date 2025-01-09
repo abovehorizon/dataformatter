@@ -222,8 +222,12 @@
                     var temp = template;
                     var customFunction = $("#custom-function").val();
                     for (var j = 0; j < headers.length; j++) {
-                        temp = temp.replaceAll(headers[j], cells[j]);
-                        customFunction = customFunction.replaceAll(headers[j], cells[j]);
+                        var cellContent = cells[j];
+                        if (typeof cellContent === 'undefined') {
+                            cellContent = "";
+                        }
+                        temp = temp.replaceAll(headers[j], cellContent);
+                        customFunction = customFunction.replaceAll(headers[j], cellContent);
                     }
 
                     temp = temp.replaceAll("{{TAB}}", "\t");
