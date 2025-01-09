@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#712cf9">
+	<title>Data Formatter</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+		crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+		integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+		crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+	<style>
+		.form-switch input {
+			cursor: pointer;
+		}
+
+		.title {
+			color: white;
+			font-weight: 900;
+			font-size: 1.5em;
+		}
+
+		.navbar {
+			border-bottom: 5px solid #0d6efd !important;
+		}
+
+		#custom-function {
+			width: 100%;
+			height: 50px;
+
+		}
+
+		.table-responsive {
+			border-radius: 8px;
+			margin-top: 18px;
+			border: 1px solid #fff;
+			scrollbar-color: white transparent;
+			scrollbar-width: thin;
+			scroll-behavior: smooth;
+
+		}
+
+		.table {
+
+			margin: 0;
+		}
+
+		.table td,
+		.table th {
+			color: #fff;
+			background-color: rgba(0, 0, 0, 0.1);
+		}
+	</style>
+
+
+</head>
+
+<body class="bg-dark text-light fs-6">
+	<nav class="navbar  bg-dark border-bottom  navbar-expand-lg  text-light">
+		<div class="container-fluid">
+			<h1 class="title">Data Formatter</h1>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+				aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+		</div>
+	</nav>
+	<div class="container-fluid p-4">
+
+
+		<div class="row">
+			<div class="col-4">
+				<h6>Data</h6>
+				<textarea class="form-control" rows="18" placeholder="" id="data"></textarea>
+				<div id="data-structure"></div>
+
+			</div>
+			<div class="col-4">
+				<h6>Template</h6>
+				<textarea class="form-control mb-2" rows="5" id="template"></textarea>
+				<div class="form-check form-switch">
+					<input class="form-check-input" role="switch" type="checkbox" id="opt-array" />
+					<label class="form-check-label" for="opt-array"></label>
+					Format as array
+				</div>
+				<div class="form-check form-switch mb-3">
+					<input class="form-check-input" role="switch" type="checkbox" id="opt-concat" />
+					<label class="form-check-label" for="opt-concat"></label>
+					Remove line breaks
+				</div>
+
+				<p><strong>{{TAB}}</strong> Adds a Tab space</p>
+				<p><strong>{{INDEX}}</strong> Adds the index number of the row (1...N)</p>
+				<p><strong>{{RANDOM}}</strong> Adds a random number between:
+				<div class="input-group"><input type="number" style="width: 80px" id="random-min" class="form-control"
+						value="1"><input style="width: 80px" type="number" class="form-control" id="random-max"
+						value="10"></div>
+				</p>
+				<p><strong>{{FUNCTION}}</strong> Adds the output of the function you define below:</output> <textarea
+						id="custom-function" class="form-control mt-3"
+						value="1">return "{{1}}".toUpperCase();</textarea></p>
+				<div class="d-grid gap-2">
+					<button type="button" class="btn btn-primary" id="process"><i class="bi bi-body-text"></i> Format
+						Data</button>
+				</div>
+
+			</div>
+
+
+			<div class="col-4">
+				<h6>Output</h6>
+
+				<textarea class="form-control" rows="20" id="output"></textarea>
+
+
+
+				<button type="button" class="btn btn-outline-light mt-3 col-3 offset-9" id="save"><i
+						class="bi bi-box-arrow-down"></i> Save</button>
+
+			</div>
+		</div>
+
+
+	</div> <!-- end home -->
+
+
+
+	</div>
+	<script>
+		var headers = [];
+		var separator = "";
+		var historyLog = [];
+
+		$(document).ready(function () {
+
+			var store = localStorage.getItem("lg-history");
+			if (store) {
+				historyLog = JSON.parse(store);
+				var recent = historyLog[historyLog.length - 1];
+				$("#template").val(recent["template"]);
+				$("#data").val(recent["data"]);
+				$("#data").trigger("keyup");
+			}
+
+		});
+
+		$(document).on("click", "#save", function () {
+
+			// Usage example
+			var data = $("#output").val();
+			writeFile(data, "data.txt");
+
+		});
+
+		$(document).on("click", "#process", function () {
+			var template = $("#template").val();
+			var data = $("#data").val();
+			addToHistory(data, template);
+			var rows = data.split("\n");
+			var output = [];
+
+			for (var i = 0; i < rows.length; i++) {
+
+				var row = rows[i];
+				var cells = row.split(separator);
+				var temp = template;
+				var customFunction = $("#custom-function").val();
+				for (var j = 0; j < headers.length; j++) {
+					var index = mapHeaderToArrayIndex(headers[j]);
+					temp = temp.replaceAll(headers[j], cells[index]);
+					customFunction = customFunction.replaceAll(headers[j], cells[index]);
+				}
+				temp = temp.replaceAll("{{TAB}}", "\t");
+				temp = temp.replaceAll("{{INDEX}}", (i + 1));
+
+				customFunction = customFunction.replaceAll("{{TAB}}", "\t");
+				customFunction = customFunction.replaceAll("{{INDEX}}", (i + 1));
+
+				var randomMin = parseInt($("#random-min").val());
+				var randomMax = parseInt($("#random-max").val());
+
+				temp = temp.replaceAll("{{RANDOM}}", getRandomValue(randomMin, randomMax));
+				customFunction = customFunction.replaceAll("{{RANDOM}}", getRandomValue(randomMin, randomMax));
+				if (customFunction) {
+					var func = new Function(customFunction);
+					var result = func();
+					temp = temp.replaceAll("{{FUNCTION}}", result);
+				}
+
+				output.push(temp);
+
+			}
+			// check options
+			var outputString = "";
+			if ($("#opt-array").is(":checked")) {
+				// format as array
+				var newline = "\n"
+				var tab = "\t";
+				if ($("#opt-concat").is(":checked")) {
+					newline = "";
+					tab = "";
+				}
+				outputString
+				outputString = "[" + newline + tab + "\"" + output.join("\"," + newline + tab + "\"") + "\"" + newline + "]";
+
+			} else {
+				outputString = output.join("\n");
+			}
+
+
+			$("#output").val(outputString);
+
+		});
+
+		$(document).on("keyup", "#data", function () {
+			var data = $("#data").val();
+			//take 1st 2 lines
+			var rows = data.split("\n");
+			var row1 = rows[0];
+			var cellCount = 0
+			separator = detectSeparator(row1);
+
+			var html = "";
+
+
+			var cells = row1.split(separator);
+			cellCount = cells.length;
+			var cellString = '';
+
+			for (var i = 0; i < cellCount; i++) {
+				cellString += '<td>' + cells[i] + '</td>';
+			}
+
+			html += '<tr>' + cellString + '</tr>';
+
+
+			headers = [];
+
+
+			// generator header
+			var header = "";
+			for (var j = 0; j < cellCount; j++) {
+				var headerTag = "{{" + (j + 1) + "}}";
+				header += '<th>' + headerTag + '</th>';
+				headers.push(headerTag);
+			}
+
+			$('#data-structure').html('<div class="table-responsive"><table class="table table-bordered"><tr>' + header + '</tr>' + html + '</table></div>');
+
+		});
+
+
+
+		function addToHistory(data, template) {
+			historyLog.push({
+				"data": data,
+				"template": template
+			});
+			localStorage.setItem("lg-history", JSON.stringify(historyLog));
+		}
+
+		function detectSeparator(dataString) {
+			// Define common separators
+			const separators = [',', '\t', ';', '|', ' '];
+			const separatorCounts = {};
+
+			// Count occurrences of each separator
+			separators.forEach(separator => {
+				const count = (dataString.split(separator).length - 1);
+				separatorCounts[separator] = count;
+			});
+
+			// Determine the separator with the highest count
+			let maxCount = 0;
+			let likelySeparator = null;
+
+			for (const separator in separatorCounts) {
+				if (separatorCounts[separator] > maxCount) {
+					maxCount = separatorCounts[separator];
+					likelySeparator = separator;
+				}
+			}
+
+			// If no separator is detected, return a message
+			if (likelySeparator === null) {
+				return 'No separator detected';
+			}
+
+			return likelySeparator;
+		}
+
+		function mapHeaderToArrayIndex(header) {
+			var value = header.replace("{{", "").replace("}}", "");
+			value = parseInt(value) - 1;
+			return value;
+		}
+
+		function getRandomValue(min, max) {
+			if (min > max) {
+				throw new Error("Minimum value should be less than or equal to the maximum value.");
+			}
+			return Math.round(Math.random() * (max - min) + min);
+		}
+
+		async function writeFile(data, filename = 'data.txt') {
+			// Check for the availability of the File System Access API
+			if ('showSaveFilePicker' in window) {
+				try {
+					const fileHandle = await window.showSaveFilePicker({
+						suggestedName: filename
+					});
+
+					const writableStream = await fileHandle.createWritable();
+					await writableStream.write(data);
+					await writableStream.close();
+					console.log('File written successfully!');
+				} catch (error) {
+					console.log('Error writing file:', error);
+				}
+			} else {
+				console.log('File System Access API not supported in this browser.');
+			}
+		}
+
+		function downloadFile(data, filename = 'example.txt') {
+			const blob = new Blob([data], { type: 'text/plain' });
+			const url = URL.createObjectURL(blob);
+
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+			console.log('File download initiated.');
+		}
+
+	</script>
+</body>
+
+</html>
