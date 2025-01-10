@@ -244,12 +244,13 @@
                     $("#process").trigger("click");
                 }
 
-            });
+                var saveButton = document.getElementById('save');
+                saveButton.addEventListener('click', async () => {
+                    var formattedData = document.getElementById('output').value;
+                    const blob = new Blob([formattedData], { type: 'text/plain' });
+                    await saveFile(blob, "data.txt");
+                });
 
-
-            $(document).on("click", "#save", function () {
-                var data = $("#output").val();
-                writeFile(data, "data.txt");
             });
 
             $(document).on("click", "#headers th", function () {
@@ -462,39 +463,7 @@
                 return Math.round(Math.random() * (max - min) + min);
             }
 
-            async function writeFile(data, filename = 'data.txt') {
-
-                if ('showSaveFilePicker' in window) {
-                    try {
-                        const fileHandle = await window.showSaveFilePicker({
-                            suggestedName: filename
-                        });
-
-                        const writableStream = await fileHandle.createWritable();
-                        await writableStream.write(data);
-                        await writableStream.close();
-                    } catch (error) {
-                        console.log('Error writing file:', error);
-                    }
-                } else {
-                    console.log('File System Access API not supported in this browser.');
-                }
-            }
-
-            function downloadFile(data, filename = 'example.txt') {
-                const blob = new Blob([data], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                console.log('File download initiated.');
-            }
+           
 
             function hasHeaderRow(data, separator) {
                 if ($("#opt-header").is(":checked")) {
@@ -541,6 +510,50 @@
                     $("#template-suffix").val(settings["template-suffix"]);
                 }
             }
+
+
+
+            const saveFile = async (blob, suggestedName) => {
+     
+                const supportsFileSystemAccess =
+                    'showSaveFilePicker' in window &&
+                    (() => {
+                    try {
+                        return window.self === window.top;
+                    } catch {
+                        return false;
+                    }
+                    })();
+                if (supportsFileSystemAccess) {
+                    try {
+                    const handle = await showSaveFilePicker({
+                        suggestedName,
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return;
+                    } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error(err.name, err.message);        
+                    }
+                    return;
+                    }
+                }
+             
+                const blobURL = URL.createObjectURL(blob);
+       
+                const a = document.createElement('a');
+                a.href = blobURL;
+                a.download = suggestedName;
+                a.style.display = 'none';
+                document.body.append(a);
+                a.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(blobURL);
+                    a.remove();
+                }, 1000);
+                };
 
         </script>
     </body>
